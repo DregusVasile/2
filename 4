@@ -1,0 +1,95 @@
+import csv
+import random
+
+class CustomHashTable:
+    def __init__(self, size=100003):  # Inițializare hash table cu o dimensiune de 100003 (număr prim)
+        self.size = size  # Setează dimensiunea tabelului hash
+        self.table = [[] for _ in range(self.size)]  # Creează un tabel hash cu liste goale (coliziuni gestionate prin chaining)
+
+    def custom_hash_function(self, cnp):
+        """Funcție de hash simplă bazată pe metoda multiplicativă."""
+        hash_value = 0  # Inițializarea valorii de hash
+        prime = 31  # Folosim un număr prim pentru calculul hash-ului
+        for char in cnp:  # Iterăm prin fiecare caracter din CNP
+            hash_value = (hash_value * prime + ord(char)) % self.size  # Calculăm valoarea hash
+        return hash_value  # Returnează valoarea hash finală
+
+    def insert(self, cnp, nume):
+        """Inserează un CNP și numele asociat în tabelul hash."""
+        index = self.custom_hash_function(cnp)  # Calculăm indexul pentru CNP
+        # Verificăm dacă CNP-ul nu există deja în lista de la indexul respectiv
+        if not any(entry[0] == cnp for entry in self.table[index]):
+            self.table[index].append((cnp, nume))  # Adăugăm perechea CNP-nume în bucket-ul corespunzător
+            print(f"📌 Inserat: {cnp} ({nume}) la index {index}")  # Afișăm confirmarea inserării
+
+    def contains(self, cnp):
+        """Verifică dacă un CNP există și returnează numărul de iterații."""
+        index = self.custom_hash_function(cnp)  # Calculăm indexul pentru CNP
+        bucket = self.table[index]  # Obținem bucket-ul corespunzător
+        iterations = 0  # Contor pentru numărul de iterații (elemente verificate)
+        for stored_cnp, nume in bucket:  # Iterăm prin fiecare element din bucket
+            iterations += 1  # Incrementăm numărul de iterații
+            if stored_cnp == cnp:  # Dacă CNP-ul căutat se află în bucket
+                return True, iterations, nume  # Returnăm True, numărul de iterații și numele asociat
+        return False, iterations, None  # Dacă CNP-ul nu a fost găsit, returnăm False și numărul de iterații
+
+def incarca_si_insereaza_cnp(uri, hash_table):
+    """Încarcă CNP-urile din fișier și le inserează în hash table."""
+    with open(uri, mode='r', newline='') as file:
+        reader = csv.reader(file)  # Citim fișierul CSV
+        next(reader)  # Sari peste antetul fișierului
+        for row in reader:  # Pentru fiecare rând (CNP și nume)
+            cnp, nume = row  # Despărțim CNP-ul și numele
+            hash_table.insert(cnp, nume)  # Inserăm CNP-ul și numele în tabelul hash
+
+def interfata_cautare(hash_table):
+    """Interfață pentru căutarea unui CNP specific."""
+    while True:
+        cnp = input("🔍 Introduceți CNP-ul pentru căutare (sau 'exit' pentru a ieși): ").strip()  # Citim CNP-ul de la utilizator
+        if cnp.lower() == "exit":  # Dacă utilizatorul scrie 'exit', ieșim din buclă
+            break
+        found, iterations, nume = hash_table.contains(cnp)  # Verificăm dacă CNP-ul există în tabel
+        if found:
+            print(f"✅ CNP {cnp} aparține lui {nume}. Găsit după {iterations} iterații.")
+        else:
+            print(f"❌ CNP {cnp} NU a fost găsit. Iterații: {iterations}")
+
+def testeaza_cautare(hash_table, cnp_list):
+    """Caută 1.000 de CNP-uri aleatorii și înregistrează numărul de iterații."""
+    sample_cnp = random.sample(cnp_list, 1000)  # Alegem 1.000 de CNP-uri aleatorii din listă
+    total_iterations = 0  # Inițializăm variabila pentru totalul iterațiilor
+
+    print("\n🔍 Începerea testului de căutare pentru 1.000 CNP-uri...\n")
+    for cnp in sample_cnp:  # Iterăm prin fiecare CNP ales aleatoriu
+        _, iterations, _ = hash_table.contains(cnp)  # Verificăm dacă CNP-ul există
+        total_iterations += iterations  # Adunăm iterațiile
+
+    avg_iterations = total_iterations / 1000  # Calculăm media iterațiilor
+    print(f"\n✅ Test finalizat. Număr total de iterații: {total_iterations}")
+    print(f"📊 Număr mediu de iterații per căutare: {avg_iterations:.2f}")
+
+# Generare CNP-uri și nume pentru testare
+prenume = ['Andrei', 'Maria', 'Ion', 'Elena', 'Vasile']
+nume_familie = ['Popescu', 'Ionescu', 'Georgescu', 'Stan', 'Dumitrescu']
+cnp_date = []
+
+for _ in range(1000000):  # Generăm 1 milion de CNP-uri
+    cnp = str(random.randint(1000000000000, 2999999999999))  # CNP aleatoriu (12 caractere)
+    nume_complet = f"{random.choice(prenume)} {random.choice(nume_familie)}"  # Nume aleatoriu
+    cnp_date.append((cnp, nume_complet))  # Adăugăm perechea CNP-nume în listă
+
+# Salvăm datele într-un fișier CSV
+with open("cnp_date.csv", mode='w', newline='') as file:
+    writer = csv.writer(file)  # Creăm un writer pentru fișierul CSV
+    writer.writerow(['CNP', 'Nume complet'])  # Scriem antetul
+    writer.writerows(cnp_date)  # Scriem datele CNP
+
+# Inițializare hash table și inserare CNP-uri
+hash_table = CustomHashTable()  # Creăm o instanță a tabelului hash
+incarca_si_insereaza_cnp("cnp_date.csv", hash_table)  # Încărcăm și inserăm CNP-urile din fișier
+
+# Testare căutare pentru 1.000 de CNP-uri
+testeaza_cautare(hash_table, [cnp for cnp, _ in cnp_date])  # Testăm căutările pentru 1.000 de CNP-uri
+
+# Pornire interfață pentru căutare manuală
+interfata_cautare(hash_table)  # Permitem utilizatorului să caute CNP-uri manual
