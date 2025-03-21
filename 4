@@ -59,7 +59,7 @@ def testeaza_cautare(hash_table, cnp_list):
     sample_cnp = random.sample(cnp_list, 1000)  # Alegem 1.000 de CNP-uri aleatorii din listă
     total_iterations = 0  # Inițializăm variabila pentru totalul iterațiilor
 
-    print("\n🔍 Începerea testului de căutare pentru 1.000 CNP-uri...\n")
+    print("\n Începerea testului de căutare pentru 1.000 CNP-uri...\n")
     for cnp in sample_cnp:  # Iterăm prin fiecare CNP ales aleatoriu
         _, iterations, _ = hash_table.contains(cnp)  # Verificăm dacă CNP-ul există
         total_iterations += iterations  # Adunăm iterațiile
