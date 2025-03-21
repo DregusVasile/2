@@ -20,7 +20,7 @@ class CustomHashTable:
         # Verificăm dacă CNP-ul nu există deja în lista de la indexul respectiv
         if not any(entry[0] == cnp for entry in self.table[index]):
             self.table[index].append((cnp, nume))  # Adăugăm perechea CNP-nume în bucket-ul corespunzător
-            print(f"📌 Inserat: {cnp} ({nume}) la index {index}")  # Afișăm confirmarea inserării
+            print(f" Inserat: {cnp} ({nume}) la index {index}")  # Afișăm confirmarea inserării
 
     def contains(self, cnp):
         """Verifică dacă un CNP există și returnează numărul de iterații."""
@@ -45,14 +45,14 @@ def incarca_si_insereaza_cnp(uri, hash_table):
 def interfata_cautare(hash_table):
     """Interfață pentru căutarea unui CNP specific."""
     while True:
-        cnp = input("🔍 Introduceți CNP-ul pentru căutare (sau 'exit' pentru a ieși): ").strip()  # Citim CNP-ul de la utilizator
+        cnp = input(" Introduceți CNP-ul pentru căutare (sau 'exit' pentru a ieși): ").strip()  # Citim CNP-ul de la utilizator
         if cnp.lower() == "exit":  # Dacă utilizatorul scrie 'exit', ieșim din buclă
             break
         found, iterations, nume = hash_table.contains(cnp)  # Verificăm dacă CNP-ul există în tabel
         if found:
-            print(f"✅ CNP {cnp} aparține lui {nume}. Găsit după {iterations} iterații.")
+            print(f" CNP {cnp} aparține lui {nume}. Găsit după {iterations} iterații.")
         else:
-            print(f"❌ CNP {cnp} NU a fost găsit. Iterații: {iterations}")
+            print(f" CNP {cnp} NU a fost găsit. Iterații: {iterations}")
 
 def testeaza_cautare(hash_table, cnp_list):
     """Caută 1.000 de CNP-uri aleatorii și înregistrează numărul de iterații."""
@@ -65,8 +65,8 @@ def testeaza_cautare(hash_table, cnp_list):
         total_iterations += iterations  # Adunăm iterațiile
 
     avg_iterations = total_iterations / 1000  # Calculăm media iterațiilor
-    print(f"\n✅ Test finalizat. Număr total de iterații: {total_iterations}")
-    print(f"📊 Număr mediu de iterații per căutare: {avg_iterations:.2f}")
+    print(f"\n Test finalizat. Număr total de iterații: {total_iterations}")
+    print(f" Număr mediu de iterații per căutare: {avg_iterations:.2f}")
 
 # Generare CNP-uri și nume pentru testare
 prenume = ['Andrei', 'Maria', 'Ion', 'Elena', 'Vasile']
