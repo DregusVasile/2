@@ -1,0 +1,138 @@
+import hashlib
+import time  # Importăm modulul time pentru a măsura timpul de rulare
+
+# Hash-ul parolei reale
+TARGET_HASH = "0e000d61c1735636f56154f30046be93b3d71f1abbac3cd9e3f80093fdb357ad"
+
+
+# Funcția care calculează hash-ul unei parole
+def get_hash(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+# Seturile de caractere disponibile
+uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+digits = "0123456789"
+specials = "!@#$"
+lowercase = "abcdefghijklmnopqrstuvwxyz"
+
+# Contorizare apeluri recursive
+recursive_calls = 0
+found = False
+
+
+# Funcția recursivă de backtracking
+def backtrack(password, count_upper, count_digit, count_special, count_lower, start_time):
+    global recursive_calls, found
+
+    if found:
+        return  # Oprire dacă parola a fost deja găsită
+
+    if len(password) == 6:
+        if count_upper == 1 and count_digit == 1 and count_special == 1 and count_lower == 3:
+            recursive_calls += 1
+            if get_hash(password) == TARGET_HASH:
+                print(f"Parola găsită: {password}")
+                print(f"Număr apeluri recursive: {recursive_calls}")
+                found = True
+                # Măsurăm timpul la finalul găsirii parolei
+                elapsed_time = time.time() - start_time
+                minutes = elapsed_time // 60
+                seconds = elapsed_time % 60
+                print(f"Timpul de rulare: {int(minutes)} minute și {int(seconds)} secunde.")
+        return
+
+    recursive_calls += 1
+
+    # Adăugăm fiecare tip de caracter menținând constrângerile
+    if count_upper < 1:
+        for ch in uppercase:
+            backtrack(password + ch, count_upper + 1, count_digit, count_special, count_lower, start_time)
+    if count_digit < 1:
+        for ch in digits:
+            backtrack(password + ch, count_upper, count_digit + 1, count_special, count_lower, start_time)
+    if count_special < 1:
+        for ch in specials:
+            backtrack(password + ch, count_upper, count_digit, count_special + 1, count_lower, start_time)
+    if count_lower < 3:
+        for ch in lowercase:
+            backtrack(password + ch, count_upper, count_digit, count_special, count_lower + 1, start_time)
+
+
+# Inițierea procesului de backtracking
+start_time = time.time()  # Capturăm timpul de început
+backtrack("", 0, 0, 0, 0, start_time)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#import time
+#start_time = time.time()
+#elapsed_time = time.time() - start_time
+#minutes = elapsed_time // 60
+#seconds = elapsed_time % 60
+#print(f"Timpul de rulare: {int(minutes)} minute și {int(seconds)} secunde.")
