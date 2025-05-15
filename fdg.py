@@ -1,56 +1,62 @@
-import hashlib
+import json
+import random
 
-# Hash-ul parolei reale
-TARGET_HASH = "0e000d61c1735636f56154f30046be93b3d71f1abbac3cd9e3f80093fdb357ad"
-
-
-# Funcția care calculează hash-ul unei parole
-def get_hash(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# Încarcă datele din fișierul JSON
+with open("date.json", "r") as f:
+    data = json.load(f)  # <- asta trebuie indentat cu 4 spații/tab
+    bancnote = sorted(data["bancnote"], key=lambda x: -x["valoare"])  # Sortate descrescător
 
 
-# Seturile de caractere disponibile
-uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-digits = "0123456789"
-specials = "!@#$"
-lowercase = "abcdefghijklmnopqrstuvwxyz"
+bancnote = sorted(data["bancnote"], key=lambda x: -x["valoare"])  # Sortate descrescător
+produse = data["produse"]
 
-# Contorizare apeluri recursive
-recursive_calls = 0
-found = False
+# Convertim lista de bancnote într-un dicționar pentru acces rapid
+stoc = {b["valoare"]: b["stoc"] for b in bancnote}
+valori = list(stoc.keys())
 
+def rest_optim(sum_rest):
+    """
+    Returnează o combinație optimă de bancnote pentru o sumă dată,
+    folosind programare dinamică și ținând cont de stocul disponibil.
+    """
+    dp = [None] * (sum_rest + 1)
+    dp[0] = {}
 
-def backtrack(password, count_upper, count_digit, count_special, count_lower):
-    global recursive_calls, found
+    for s in range(1, sum_rest + 1):
+        for val in valori:
+            if val <= s and dp[s - val] is not None:
+                prev_combo = dp[s - val].copy()
+                prev_combo[val] = prev_combo.get(val, 0) + 1
+                if prev_combo[val] <= stoc[val]:
+                    if dp[s] is None or sum(prev_combo.values()) < sum(dp[s].values()):
+                        dp[s] = prev_combo
+    return dp[sum_rest]
 
-    if found:
-        return  # Oprire dacă parola a fost deja găsită
+clienti_serviti = 0
 
-    if len(password) == 6:
-        if count_upper == 1 and count_digit == 1 and count_special == 1 and count_lower == 3:
-            recursive_calls += 1
-            if get_hash(password) == TARGET_HASH:
-                print(f"Parola găsită: {password}")
-                print(f"Număr apeluri recursive: {recursive_calls}")
-                found = True
-        return
+while True:
+    produs = random.choice(produse)
+    pret = produs["pret"]
+    suma_platita = pret + random.randint(1, 20)
+    rest = suma_platita - pret
 
-    recursive_calls += 1
+    print(f"\nClientul {clienti_serviti + 1}:")
+    print(f"  Produs: {produs['nume']}, Preț: {pret} lei")
+    print(f"  Suma plătită: {suma_platita} lei")
+    print(f"  Rest de oferit: {rest} lei")
 
-    # Adăugăm fiecare tip de caracter menținând constrângerile
-    if count_upper < 1:
-        for ch in uppercase:
-            backtrack(password + ch, count_upper + 1, count_digit, count_special, count_lower)
-    if count_digit < 1:
-        for ch in digits:
-            backtrack(password + ch, count_upper, count_digit + 1, count_special, count_lower)
-    if count_special < 1:
-        for ch in specials:
-            backtrack(password + ch, count_upper, count_digit, count_special + 1, count_lower)
-    if count_lower < 3:
-        for ch in lowercase:
-            backtrack(password + ch, count_upper, count_digit, count_special, count_lower + 1)
+    solutie = rest_optim(rest)
 
+    if solutie is None:
+        print("\n  Nu se poate oferi restul cu bancnotele disponibile. Simularea se oprește.")
+        print("  Stoc rămas:")
+        for v in valori:
+            print(f"    {v} lei: {stoc[v]} bucăți")
+        break
 
-# Inițierea procesului de backtracking
-backtrack("", 0, 0, 0, 0)
+    print("  Rest oferit cu următoarele bancnote:")
+    for val in sorted(solutie.keys(), reverse=True):
+        print(f"    {val} lei x {solutie[val]}")
+        stoc[val] -= solutie[val]
+
+    clienti_serviti += 1
