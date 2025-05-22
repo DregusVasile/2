@@ -1,34 +1,80 @@
 import csv
 import random
 
-# Configurare luna si zi
-luni_permise = ['01', '02', '03', '05', '07']
-zile_permise = ['01', '10', '15', '20', '28']
 
-# Generare CNP
+# 1. LISTA JUDEȚE CU CODURI
+
+# Lista codurilor județene valabile pentru CNP, fără codurile desființate (47, 48) și fără codul special 70.
+judete = [
+    ("01", "Alba"), ("02", "Arad"), ("03", "Argeș"), ("04", "Bacău"),
+    ("05", "Bihor"), ("06", "Bistrița-Năsăud"), ("07", "Botoșani"), ("08", "Brașov"),
+    ("09", "Brăila"), ("10", "Buzău"), ("11", "Caraș-Severin"), ("12", "Cluj"),
+    ("13", "Constanța"), ("14", "Covasna"), ("15", "Dâmbovița"), ("16", "Dolj"),
+    ("17", "Galați"), ("18", "Gorj"), ("19", "Harghita"), ("20", "Hunedoara"),
+    ("21", "Ialomița"), ("22", "Iași"), ("23", "Ilfov"), ("24", "Maramureș"),
+    ("25", "Mehedinți"), ("26", "Mureș"), ("27", "Neamț"), ("28", "Olt"),
+    ("29", "Prahova"), ("30", "Satu Mare"), ("31", "Sălaj"), ("32", "Sibiu"),
+    ("33", "Suceava"), ("34", "Teleorman"), ("35", "Timiș"), ("36", "Tulcea"),
+    ("37", "Vaslui"), ("38", "Vâlcea"), ("39", "Vrancea"), ("40", "București"),
+    ("41", "București - Sector 1"), ("42", "București - Sector 2"),
+    ("43", "București - Sector 3"), ("44", "București - Sector 4"),
+    ("45", "București - Sector 5"), ("46", "București - Sector 6"),
+    ("51", "Călărași"), ("52", "Giurgiu")
+]
+
+
+# 2. FUNCȚII DE VALIDARE A DATELOR DIN CNP
+
+
+# Verifică dacă un an este bisect (necesar pentru luna februarie)
+def este_bisect(an):
+    return an % 4 == 0 and (an % 100 != 0 or an % 400 == 0)
+
+# Returnează numărul de zile al unei luni, ținând cont de anii bisecți
+def zile_in_luna(an, luna):
+    if luna == 2:
+        return 29 if este_bisect(an) else 28
+    elif luna in [1, 3, 5, 7, 8, 10, 12]:
+        return 31
+    else:
+        return 30
+
+# Calculează cifra de control pentru CNP
 def calculeaza_cifra_control(cnp_partial):
     coef = "279146358279"
     total = sum(int(a) * int(b) for a, b in zip(cnp_partial, coef))
     rest = total % 11
     return '1' if rest == 10 else str(rest)
 
+
+# 3. GENERARE CNP VALID
+
 def genereaza_cnp():
-    s = str(random.choice([1, 2, 5, 6]))
+    s = str(random.choice([1, 2, 5, 6]))  # Sex + secol
     aa = str(random.randint(0, 99)).zfill(2)
-    ll = random.choice(luni_permise)
-    zz = random.choice(zile_permise)
-    judet = str(random.randint(1, 52)).zfill(2)
+    ll = random.randint(1, 12)
+    luna = str(ll).zfill(2)
+
+    # Determinarea anului complet
+    an = 1900 + int(aa) if s in ['1', '2'] else 2000 + int(aa)
+
+    zi = str(random.randint(1, zile_in_luna(an, ll))).zfill(2)
+    judet_code, _ = random.choice(judete)
     nnn = str(random.randint(1, 999)).zfill(3)
-    cnp_partial = s + aa + ll + zz + judet + nnn
+
+    cnp_partial = s + aa + luna + zi + judet_code + nnn
     cifra_control = calculeaza_cifra_control(cnp_partial)
     return cnp_partial + cifra_control
 
-# Clasa Hash Table
+
+# 4. CLASA HASH TABLE PERSONALIZATĂ
+
 class CustomHashTable:
-    def __init__(self, size=100003):
+    def __init__(self, size=100003):  # Număr prim mare pentru minimizare coliziuni
         self.size = size
         self.table = [[] for _ in range(self.size)]
 
+    # Funcție hash simplă dar eficientă pentru șiruri
     def custom_hash_function(self, cnp):
         hash_value = 0
         prime = 31
@@ -36,12 +82,14 @@ class CustomHashTable:
             hash_value = (hash_value * prime + ord(char)) % self.size
         return hash_value
 
+    # Inserare element (CNP, nume)
     def insert(self, cnp, nume):
         index = self.custom_hash_function(cnp)
         if not any(entry[0] == cnp for entry in self.table[index]):
             self.table[index].append((cnp, nume))
             print(f" Inserat: {cnp} ({nume}) la index {index}")
 
+    # Căutare CNP cu contorizarea iterațiilor (pentru analiză performanță)
     def contains(self, cnp):
         index = self.custom_hash_function(cnp)
         bucket = self.table[index]
@@ -52,7 +100,10 @@ class CustomHashTable:
                 return True, iterations, nume
         return False, iterations, None
 
-# Incarcare & Testare
+
+# 5. FUNCȚII PENTRU FIȘIER CSV ȘI TESTE
+
+# Încarcă datele din CSV și le inserează în hash table
 def incarca_si_insereaza_cnp(uri, hash_table):
     with open(uri, mode='r', newline='') as file:
         reader = csv.reader(file)
@@ -61,6 +112,7 @@ def incarca_si_insereaza_cnp(uri, hash_table):
             cnp, nume = row
             hash_table.insert(cnp, nume)
 
+# Alege 1.000 CNP-uri aleator și evaluează performanța căutărilor
 def testeaza_cautare(hash_table, cnp_list):
     sample_cnp = random.sample(cnp_list, 1000)
     total_iterations = 0
@@ -72,6 +124,7 @@ def testeaza_cautare(hash_table, cnp_list):
     print(f"\n Test finalizat. Număr total de iterații: {total_iterations}")
     print(f" Număr mediu de iterații per căutare: {avg_iterations:.2f}")
 
+# Interfață de utilizator pentru test manual de căutare
 def interfata_cautare(hash_table):
     while True:
         cnp = input(" Introduceți CNP-ul pentru căutare (sau 'exit' pentru a ieși): ").strip()
@@ -83,25 +136,32 @@ def interfata_cautare(hash_table):
         else:
             print(f" CNP {cnp} NU a fost găsit. Iterații: {iterations}")
 
-# Generare & Salvare
+
+# 6. GENERARE, SALVARE, INSERARE ȘI TEST
+
+
 prenume = ['Andrei', 'Maria', 'Ion', 'Elena', 'Vasile']
 nume_familie = ['Popescu', 'Ionescu', 'Georgescu', 'Stan', 'Dumitrescu']
 cnp_date = []
 
-for _ in range(1000000):
+# Generăm 1.000.000 de CNP-uri + nume asociat
+for _ in range(1_000_000):
     cnp = genereaza_cnp()
     nume_complet = f"{random.choice(prenume)} {random.choice(nume_familie)}"
-    print(f"{cnp} - {nume_complet}")  # Afișează fiecare CNP și nume
     cnp_date.append((cnp, nume_complet))
 
+# Salvăm în fișier CSV
 with open("cnp_date.csv", mode='w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['CNP', 'Nume complet'])
     writer.writerows(cnp_date)
 
-# Inserare & Testare
+# Inițializare hash table și încărcare date
 hash_table = CustomHashTable()
 incarca_si_insereaza_cnp("cnp_date.csv", hash_table)
-testeaza_cautare(hash_table, [cnp for cnp, _ in cnp_date])
-interfata_cautare(hash_table)
 
+# Testare performanță
+testeaza_cautare(hash_table, [cnp for cnp, _ in cnp_date])
+
+# Interfață interactivă pentru test manual
+interfata_cautare(hash_table)
