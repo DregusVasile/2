@@ -140,55 +140,85 @@ book_form.py
 import tkinter as tk
 from tkinter import messagebox
 
-# Clasa care definește o fereastră (Toplevel) pentru adăugarea sau editarea unei cărți
 class BookForm(tk.Toplevel):
-    def __init__(self, parent, book=None, on_save=None):
-        super().__init__(parent)
+    def __init__(self, master, book=None, on_save=None):
+        super().__init__(master)
         self.title("Formular Carte")
-        self.geometry("300x250")
-        self.book = book          # Dacă primim o carte, e o editare
-        self.on_save = on_save    # Funcția de apelat când salvăm
-        self.create_widgets()
+        self.on_save = on_save
+        self.book = book
+
+        # Creăm label-urile și entry-urile pentru fiecare câmp
+        tk.Label(self, text="Titlu:").grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.entry_title = tk.Entry(self)
+        self.entry_title.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self, text="Autor:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.entry_author = tk.Entry(self)
+        self.entry_author.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Label(self, text="An:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        vcmd = (self.register(self.validate_year), '%P')
+        self.entry_year = tk.Entry(self, validate="key", validatecommand=vcmd)
+        self.entry_year.grid(row=2, column=1, padx=5, pady=5)
+
+        tk.Label(self, text="Gen:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
+        self.entry_gen = tk.Entry(self)
+        self.entry_gen.grid(row=3, column=1, padx=5, pady=5)
+
+        # Dacă edităm o carte, completăm câmpurile
         if book:
-            self.fill_form()
+            self.entry_title.insert(0, book["titlu"])
+            self.entry_author.insert(0, book["autor"])
+            self.entry_year.insert(0, str(book["an"]))
+            self.entry_gen.insert(0, book["gen"])
 
-    # Creează câmpurile formularului (Titlu, Autor, An, Gen)
-    def create_widgets(self):
-        self.entries = {}
-        fields = ["Titlu", "Autor", "An", "Gen"]
-        for i, field in enumerate(fields):
-            tk.Label(self, text=field).grid(row=i, column=0, pady=5, sticky="w")
-            entry = tk.Entry(self)
-            entry.grid(row=i, column=1, pady=5)
-            self.entries[field.lower()] = entry  # Salvăm referința la Entry
+        # Butonul de salvare
+        btn_save = tk.Button(self, text="Salvează", command=self.save)
+        btn_save.grid(row=4, column=0, columnspan=2, pady=10)
 
-        tk.Button(self, text="Salvează", command=self.save).grid(row=5, column=0, columnspan=2, pady=10)
+    def validate_year(self, new_value):
+        if new_value == "":
+            return True  # Permite gol pentru ștergere
+        if new_value.isdigit():
+            val = int(new_value)
+            if 0 <= val <= 2025:  # Permite anul 0 până la 2025
+                return True
+        return False
 
-    # Dacă edităm o carte, pre-umplem câmpurile
-    def fill_form(self):
-        self.entries["titlu"].insert(0, self.book["titlu"])
-        self.entries["autor"].insert(0, self.book["autor"])
-        self.entries["an"].insert(0, self.book["an"])
-        self.entries["gen"].insert(0, self.book["gen"])
-
-    # Salvează datele introduse în formular
     def save(self):
+        # Verificăm validitatea anului și celelalte câmpuri
         try:
-            new_data = {
-                "titlu": self.entries["titlu"].get(),
-                "autor": self.entries["autor"].get(),
-                "an": int(self.entries["an"].get()),  # Anul trebuie să fie numeric
-                "gen": self.entries["gen"].get()
-            }
-
-            if self.book:
-                new_data["id"] = self.book["id"]  # Dacă e editare, păstrăm ID-ul
-
-            if self.on_save:
-                self.on_save(new_data)  # Apelăm funcția care actualizează lista principală
-            self.destroy()  # Închidem formularul
+            an = int(self.entry_year.get())
+            if an < 0 or an > 2025:
+                messagebox.showerror("Eroare", "Anul trebuie să fie între 0 și 2025.")
+                return
         except ValueError:
-            messagebox.showerror("Eroare", "Anul trebuie să fie un număr.")
+            messagebox.showerror("Eroare", "Anul trebuie să fie un număr întreg.")
+            return
+
+        titlu = self.entry_title.get().strip()
+        autor = self.entry_author.get().strip()
+        gen = self.entry_gen.get().strip()
+
+        if not titlu or not autor or not gen:
+            messagebox.showerror("Eroare", "Toate câmpurile trebuie completate.")
+            return
+
+        new_book = {
+            "titlu": titlu,
+            "autor": autor,
+            "an": an,
+            "gen": gen,
+        }
+
+        if self.book:  # Dacă edităm, păstrăm ID-ul
+            new_book["id"] = self.book["id"]
+
+        if self.on_save:
+            self.on_save(new_book)
+
+        self.destroy()
+
 
 
 books.json
