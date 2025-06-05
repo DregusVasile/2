@@ -1,0 +1,228 @@
+run.py:
+from flask import Flask
+from app.routes.items import items_bp
+
+app = Flask(
+    __name__,
+    template_folder='app/templates',
+    static_folder='static'
+)
+
+app.register_blueprint(items_bp)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+
+
+script.js:
+async function fetchItems() {
+    const res = await fetch('/api/items');
+    const items = await res.json();
+
+    const tbody = document.querySelector('#items-table tbody');
+    tbody.innerHTML = '';
+
+    items.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.nume}</td>
+            <td>${item.cantitate}</td>
+            <td>${item.pret}</td>
+            <td>
+                <button onclick="deleteItem('${item.id}')">Șterge</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+async function deleteItem(id) {
+    await fetch(`/api/items/${id}`, { method: 'DELETE' });
+    fetchItems();
+}
+
+document.getElementById('add-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nume = document.getElementById('nume').value.trim();
+    const cantitate = parseFloat(document.getElementById('cantitate').value);
+    const pret = parseFloat(document.getElementById('pret').value);
+
+    if (nume === '') {
+        alert('Numele produsului nu poate fi gol!');
+        return;
+    }
+
+    if (cantitate < 0 || pret < 0) {
+        alert('Cantitatea și prețul trebuie să fie numere pozitive!');
+        return;
+    }
+
+    const response = await fetch('/api/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nume, cantitate, pret })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        alert(errorData.error || 'Eroare necunoscută.');
+        return;
+    }
+
+    e.target.reset();
+    fetchItems();
+});
+
+fetchItems();
+
+
+
+
+
+
+
+
+index.html:
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventar Produse</title>
+    <script src="/static/script.js" defer></script>
+</head>
+<body>
+    <h1>Inventar Produse</h1>
+
+    <form id="add-form">
+        <input type="text" id="nume" placeholder="Nume produs" required>
+        <input type="number" id="cantitate" placeholder="Cantitate" required>
+        <input type="number" id="pret" placeholder="Preț" required>
+        <button type="submit">Adaugă</button>
+    </form>
+
+    <table border="1" id="items-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nume</th>
+                <th>Cantitate</th>
+                <th>Preț</th>
+                <th>Acțiuni</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</body>
+</html>
+
+
+
+items.py:
+from flask import Blueprint, request, jsonify, render_template
+import json
+import os
+import random
+
+items_bp = Blueprint('items', __name__)
+
+DATA_FILE = os.path.join('app', 'data', 'items.json')
+
+def read_data():
+    if not os.path.exists(DATA_FILE):
+        return []
+    with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def write_data(data):
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def generate_barcode_id():
+    prefix = "642"  # România
+    cod_producator = f"{random.randint(0, 999999):06d}"
+    cod_produs = f"{random.randint(0, 999):03d}"
+    partial = prefix + cod_producator + cod_produs
+
+    # Calculează cifra de verificare conform standardului EAN-13
+    suma = 0
+    for i, cifra in enumerate(partial):
+        numar = int(cifra)
+        if (i + 1) % 2 == 0:
+            suma += numar * 3
+        else:
+            suma += numar
+    cifra_verificare = (10 - (suma % 10)) % 10
+
+    return partial + str(cifra_verificare)
+
+@items_bp.route('/')
+def index():
+    return render_template('index.html')
+
+@items_bp.route('/api/items', methods=['GET'])
+def get_items():
+    items = read_data()
+    return jsonify(items)
+
+@items_bp.route('/api/items', methods=['POST'])
+def add_item():
+    data = request.get_json()
+    nume = data.get('nume', '').strip()
+    cantitate = data.get('cantitate', 0)
+    pret = data.get('pret', 0)
+
+    if not nume or cantitate < 0 or pret < 0:
+        return jsonify({'error': 'Date invalide!'}), 400
+
+    items = read_data()
+    item_id = generate_barcode_id()
+    new_item = {
+        'id': item_id,
+        'nume': nume,
+        'cantitate': cantitate,
+        'pret': pret
+    }
+    items.append(new_item)
+    write_data(items)
+    return jsonify(new_item), 201
+
+@items_bp.route('/api/items/<item_id>', methods=['DELETE'])
+def delete_item(item_id):
+    items = read_data()
+    items = [item for item in items if item['id'] != item_id]
+    write_data(items)
+    return '', 204
+
+@items_bp.route('/api/items/<item_id>', methods=['PUT'])
+def update_item(item_id):
+    data = request.get_json()
+    nume = data.get('nume', '').strip()
+    cantitate = data.get('cantitate', 0)
+    pret = data.get('pret', 0)
+
+    if not nume or cantitate < 0 or pret < 0:
+        return jsonify({'error': 'Date invalide!'}), 400
+
+    items = read_data()
+    for item in items:
+        if item['id'] == item_id:
+            item['nume'] = nume
+            item['cantitate'] = cantitate
+            item['pret'] = pret
+            break
+    else:
+        return jsonify({'error': 'Produsul nu a fost găsit!'}), 404
+
+    write_data(items)
+    return jsonify(item)
+
+
+
+
+
+items.json:
+[]
